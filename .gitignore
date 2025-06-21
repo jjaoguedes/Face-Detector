@@ -1,7 +1,7 @@
 node_modules/
 __pycache__/
-known_faces/Bianca.jpeg
-known_faces/Joao.jpeg
+Bianca.jpeg
+Joao.jpeg
 venv/
 *.log
 *.tmp
