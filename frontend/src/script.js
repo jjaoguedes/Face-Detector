@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
   const mensagem = document.getElementById('mensagem');
+  const gerarRelatorioSemanal = document.getElementById('gerarRelatorioSemanal');
+  const gerarRelatorioMensal = document.getElementById('gerarRelatorioMensal');
+  const downloadRelatorio = document.getElementById('downloadRelatorio');
 
   await Promise.all([
     faceapi.nets.tinyFaceDetector.loadFromUri('/models')
@@ -28,12 +31,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
         enviarParaBackend(blob);
       }
-    }, 500);
+    }, 100);
   });
 
   async function enviarParaBackend(blob) {
     const formData = new FormData();
-    formData.append('imagem', blob, 'captura.jpeg');
+    formData.append('imagem', blob, 'captura.jpg');
 
     try {
       const resposta = await fetch('http://localhost:8000/face', {
@@ -46,6 +49,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       mensagem.textContent = 'Erro ao enviar imagem para o backend.';
     }
   }
+
+  // Funções para gerar relatórios
+  async function gerarRelatorio(tipo) {
+    const resposta = await fetch(`http://localhost:8000/gerar-relatorio/${tipo}`);
+    const data = await resposta.blob();
+    const url = URL.createObjectURL(data);
+    downloadRelatorio.href = url;
+    downloadRelatorio.style.display = 'block';
+  }
+
+  gerarRelatorioSemanal.addEventListener('click', () => {
+    gerarRelatorio('semanal');
+  });
+
+  gerarRelatorioMensal.addEventListener('click', () => {
+    gerarRelatorio('mensal');
+  });
 
   iniciarCamera();
 });

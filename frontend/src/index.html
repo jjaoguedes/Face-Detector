@@ -2,14 +2,25 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Captura Facial</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Acesso</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Captura Facial</h1>
-  <video id="video" autoplay muted></video>
-  <canvas id="canvas" style="display:none;"></canvas>
+  <h1>Controle de Acesso com Reconhecimento Facial</h1>
+
+  <div id="camera">
+    <video id="video" autoplay muted></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+  </div>
+
   <p id="mensagem"></p>
+
+  <div id="relatorio">
+    <button id="gerarRelatorioSemanal">Gerar Relatório Semanal</button>
+    <button id="gerarRelatorioMensal">Gerar Relatório Mensal</button>
+    <a id="downloadRelatorio" href="#" style="display:none" download>Baixar Relatório</a>
+  </div>
 
   <script defer src="/face-api.min.js"></script>
   <script defer src="script.js"></script>

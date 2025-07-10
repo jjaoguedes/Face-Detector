@@ -4,3 +4,10 @@ opencv-python
 face_recognition
 python-multipart
 numpy
+mysql-connector-python
+reportlab  # Para gerar arquivos PDF
+pandas  # Para manipulação de dados (opcional, se precisar de funcionalidades mais avançadas para manipulação de CSV)
+fpdf
+pyserial
+# pip install -r requirements.txt 
+
