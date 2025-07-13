@@ -9,5 +9,8 @@ reportlab  # Para gerar arquivos PDF
 pandas  # Para manipulação de dados (opcional, se precisar de funcionalidades mais avançadas para manipulação de CSV)
 fpdf
 pyserial
+pytz
+mysql-connector-python
+
 # pip install -r requirements.txt 
 

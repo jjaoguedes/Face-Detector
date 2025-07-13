@@ -1,6 +1,6 @@
 // Definir os pinos dos LEDs
-const int ledEntradaPin = 13;  // LED de entrada no pino 13
-const int ledSaidaPin = 12;    // LED de saída no pino 12
+const int ledEntradaPin = 4;  // LED de entrada no pino 4
+const int ledSaidaPin = 2;   // LED de saída no pino 22
 
 void setup() {
   // Iniciar comunicação serial
@@ -21,15 +21,14 @@ void loop() {
     // Ler o comando enviado pelo backend
     char comando = Serial.read();
 
-    // Se o comando for 'entrada', aciona o LED de entrada
-    if (comando == 'entrada') {
+    // Se o comando for 'e' (entrada), aciona o LED de entrada
+    if (comando == 'entrada') {  // Comando de entrada
       digitalWrite(ledEntradaPin, HIGH);  // Aciona LED de entrada
       delay(5000);  // Mantém o LED aceso por 5 segundos
       digitalWrite(ledEntradaPin, LOW);   // Desliga o LED de entrada após 5 segundos
     }
-
-    // Se o comando for 'saida', aciona o LED de saída
-    else if (comando == 'saida') {
+    // Se o comando for 's' (saída), aciona o LED de saída
+    else if (comando == 'saida') {  // Comando de saída
       digitalWrite(ledSaidaPin, HIGH);    // Aciona LED de saída
       delay(5000);  // Mantém o LED aceso por 5 segundos
       digitalWrite(ledSaidaPin, LOW);     // Desliga o LED de saída após 5 segundos

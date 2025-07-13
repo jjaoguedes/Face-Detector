@@ -10,7 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^5.1.0"
+    "@tensorflow/tfjs-core": "^4.22.0",
+    "express": "^5.1.0",
+    "face-api.js": "^0.20.0",
+    "node-fetch": "^3.0.0",
+    "tfjs-image-recognition-base": "^0.6.2"
   },
   "description": ""
 }
