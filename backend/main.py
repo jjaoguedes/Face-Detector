@@ -11,6 +11,10 @@ from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import time
+import pandas as pd
+from io import BytesIO
+from datetime import timedelta
+from fastapi.responses import StreamingResponse
 
 # Configuração de logger
 logging.basicConfig(level=logging.INFO)
@@ -159,6 +163,124 @@ async def reconhecer_rosto(imagem: UploadFile = File(...)):
     except Exception as e:
         logger.error(f"Erro geral: {e}")
         return {"erro": "Erro ao processar a imagem ou realizar o reconhecimento."}
+
+
+@app.get("/gerar-relatorio/semanal")
+@app.get("/gerar-relatorio/semanal")
+def gerar_relatorio_semanal():
+    try:
+        cursor = db.cursor(dictionary=True)
+        agora = datetime.now(pytz.timezone('America/Manaus'))
+        semana_passada = agora - timedelta(days=7)
+
+        cursor.execute("""
+            SELECT u.nome AS nome_membro, r.membro_id, r.data_entrada, r.data_saida, r.tempo_total
+            FROM registros_acesso r
+            JOIN usuarios u ON r.membro_id = u.id
+            WHERE r.data_entrada >= %s
+            ORDER BY u.nome ASC, r.data_entrada ASC
+        """, (semana_passada,))
+        registros = cursor.fetchall()
+
+        if not registros:
+            return {"erro": "Nenhum acesso registrado nos últimos 7 dias."}
+
+        df = pd.DataFrame(registros)
+
+        # Formatando datas e colunas
+        df["Entrada"] = pd.to_datetime(df["data_entrada"]).dt.strftime('%d/%m/%Y %H:%M')
+        df["Saída"] = pd.to_datetime(df["data_saida"]).dt.strftime('%d/%m/%Y %H:%M')
+        df["Tempo Total (horas)"] = df["tempo_total"].apply(lambda x: round(x / 3600, 5) if x else 0)
+
+        # Seleciona e renomeia colunas
+        df_formatado = df[["nome_membro", "membro_id", "Entrada", "Saída", "Tempo Total (horas)"]]
+        df_formatado.rename(columns={
+            "nome_membro": "Nome do Membro",
+            "membro_id": "ID do Membro"
+        }, inplace=True)
+
+        # Exporta para Excel
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            df_formatado.to_excel(writer, index=False, sheet_name='Acessos da Semana')
+
+        buffer.seek(0)
+
+        return StreamingResponse(
+            buffer,
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={'Content-Disposition': 'attachment; filename=relatorio_semanal.xlsx'}
+        )
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório semanal: {e}")
+        return {"erro": "Erro ao gerar relatório semanal."}
+
+@app.get("/gerar-relatorio/mensal")
+def gerar_relatorio_mensal():
+    try:
+        cursor = db.cursor(dictionary=True)
+        agora = datetime.now(pytz.timezone('America/Manaus'))
+        inicio_mes = agora.replace(day=1)
+
+        # Consulta: soma diária por membro
+        cursor.execute("""
+            SELECT u.nome AS nome_membro, r.membro_id, DATE(r.data_entrada) AS dia,
+                   SUM(r.tempo_total) AS tempo_total_dia
+            FROM registros_acesso r
+            JOIN usuarios u ON r.membro_id = u.id
+            WHERE r.data_entrada >= %s
+            GROUP BY r.membro_id, dia
+            ORDER BY u.nome ASC, dia ASC
+        """, (inicio_mes,))
+        dados_dia = cursor.fetchall()
+
+        if not dados_dia:
+            return {"erro": "Nenhum dado encontrado para o mês atual."}
+
+        df_dia = pd.DataFrame(dados_dia)
+
+        # Formata data e converte segundos para horas
+        df_dia["Dia"] = pd.to_datetime(df_dia["dia"]).dt.strftime('%d/%m/%Y')
+        df_dia["Tempo Total (horas)"] = df_dia["tempo_total_dia"].apply(lambda x: round(x / 3600, 5))
+
+        # Reorganiza e renomeia colunas
+        df_dia_formatado = df_dia[["nome_membro", "membro_id", "Dia", "Tempo Total (horas)"]]
+        df_dia_formatado.rename(columns={
+            "nome_membro": "Nome do Membro",
+            "membro_id": "ID do Membro"
+        }, inplace=True)
+
+        # Cálculo do resumo estatístico mensal
+        resumo = df_dia.groupby(["membro_id", "nome_membro"]).agg(
+            Total_de_Horas_no_Mês=("tempo_total_dia", lambda x: round(x.sum() / 3600, 2)),
+            Frequência_de_Dias=("dia", "nunique"),
+            Média_Diária_de_Permanência=("tempo_total_dia", lambda x: round((x.sum() / x.nunique()) / 3600, 2))
+        ).reset_index()
+
+        resumo.rename(columns={
+            "membro_id": "ID do Membro",
+            "nome_membro": "Nome do Membro"
+        }, inplace=True)
+
+        # Geração do arquivo Excel
+        buffer = BytesIO()
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            df_dia_formatado.to_excel(writer, index=False, sheet_name='Detalhado')
+            resumo.to_excel(writer, index=False, sheet_name='Resumo_Estatístico')
+
+        buffer.seek(0)
+
+        return StreamingResponse(
+            buffer,
+            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={'Content-Disposition': 'attachment; filename=relatorio_mensal.xlsx'}
+        )
+
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório mensal: {e}")
+        return {"erro": "Erro ao gerar relatório mensal."}
+
 
 @app.on_event("shutdown")
 def shutdown_event():

@@ -68,12 +68,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Geração de relatórios
   async function gerarRelatorio(tipo) {
     try {
+      mensagem.textContent = `Gerando relatório ${tipo}...`;
+      downloadRelatorio.style.display = 'none';
+
       const resposta = await fetch(`http://localhost:8000/gerar-relatorio/${tipo}`);
-      const data = await resposta.blob();
-      const url = URL.createObjectURL(data);
+      if (!resposta.ok) {
+        throw new Error('Falha ao gerar relatório');
+      }
+
+      const blob = await resposta.blob();
+      const url = URL.createObjectURL(blob);
       downloadRelatorio.href = url;
-      downloadRelatorio.style.display = 'block';
+      downloadRelatorio.download = `relatorio_${tipo}.xlsx`;
+      downloadRelatorio.style.display = 'inline';
+      mensagem.textContent = `Relatório ${tipo} pronto para download. Clique no link abaixo.`;
     } catch (e) {
+      mensagem.textContent = `Erro ao gerar relatório ${tipo}.`;
       console.error('Erro ao gerar relatório:', e);
     }
   }
