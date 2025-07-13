@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const gerarRelatorioMensal = document.getElementById('gerarRelatorioMensal');
   const downloadRelatorio = document.getElementById('downloadRelatorio');
 
-  let membrosPresentes = {}; // Para armazenar os membros que estão presentes e seu tempo de entrada.
+  let membrosPresentes = {};
 
   await Promise.all([
     faceapi.nets.tinyFaceDetector.loadFromUri('/models')
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
         enviarParaBackend(blob);
       }
-    }, 3000); // Verificação a cada 5000ms
+    }, 3000);
   });
 
   async function enviarParaBackend(blob) {
@@ -47,22 +47,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const resultado = await resposta.json();
 
       if (resposta.ok) {
-        mensagem.textContent = 'Rosto enviado com sucesso!';
-
-        // Verifica se algum rosto foi detectado
-        if (resultado.qtd_rostos_detectados > 0) {
-          const nomeMembro = resultado.resultados[0].nome;
-          const membroId = resultado.resultados[0].id;
-
-          // Verifica se o membro já está presente
-          if (!membrosPresentes[membroId]) {
-            // Registra a entrada diretamente no backend
-            membrosPresentes[membroId] = Date.now();
-            await registrarEntrada(membroId);  // Registra a entrada antes de verificar a saída
-          } else {
-            // Caso contrário, registra a saída após verificar a entrada
-            await registrarSaida(membroId);
-          }
+        if (resultado.status === 'entrada') {
+          mensagem.textContent = `Entrada registrada: ${resultado.nome} (ID ${resultado.membro_id})`;
+          membrosPresentes[resultado.membro_id] = Date.now();
+        } else if (resultado.status === 'saida') {
+          mensagem.textContent = `Saída registrada: ${resultado.nome} (ID ${resultado.membro_id}) - Tempo: ${resultado.tempo_total}s`;
+          delete membrosPresentes[resultado.membro_id];
+        } else {
+          mensagem.textContent = resultado.erro || 'Rosto não reconhecido.';
         }
       } else {
         mensagem.textContent = 'Erro ao processar rosto: ' + (resultado.erro || 'Erro desconhecido');
@@ -73,49 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Função para registrar a entrada
-  async function registrarEntrada(membroId) {
-    try {
-      const resposta = await fetch(`http://localhost:8000/face`, {
-        method: 'POST',
-        body: JSON.stringify({ membro_id: membroId }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      const resultado = await resposta.json();
-      if (resposta.ok) {
-        mensagem.textContent = `Entrada registrada para o membro ID: ${membroId}`;
-      } else {
-        mensagem.textContent = 'Erro ao registrar entrada.';
-      }
-    } catch (e) {
-      mensagem.textContent = 'Erro ao registrar entrada.';
-      console.error('Erro ao registrar entrada:', e);
-    }
-  }
-
-  // Função para registrar a saída
-  async function registrarSaida(membroId) {
-    try {
-      const resposta = await fetch(`http://localhost:8000/saida?membro_id=${membroId}`, {
-        method: 'POST'
-      });
-      const resultado = await resposta.json();
-      if (resposta.ok) {
-        mensagem.textContent = `Saída registrada com sucesso para o membro ID: ${membroId}`;
-        // Limpa o membro presente após registrar a saída
-        delete membrosPresentes[membroId];
-      } else {
-        mensagem.textContent = 'Erro ao registrar saída.';
-      }
-    } catch (e) {
-      mensagem.textContent = 'Erro ao registrar saída.';
-      console.error('Erro ao registrar saída:', e);
-    }
-  }
-
-  // Funções para gerar relatórios
+  // Geração de relatórios
   async function gerarRelatorio(tipo) {
     try {
       const resposta = await fetch(`http://localhost:8000/gerar-relatorio/${tipo}`);
@@ -128,13 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  gerarRelatorioSemanal.addEventListener('click', () => {
-    gerarRelatorio('semanal');
-  });
-
-  gerarRelatorioMensal.addEventListener('click', () => {
-    gerarRelatorio('mensal');
-  });
+  gerarRelatorioSemanal.addEventListener('click', () => gerarRelatorio('semanal'));
+  gerarRelatorioMensal.addEventListener('click', () => gerarRelatorio('mensal'));
 
   iniciarCamera();
 });
