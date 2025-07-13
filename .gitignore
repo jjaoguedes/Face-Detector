@@ -6,3 +6,5 @@ venv/
 *.log
 *.tmp
 temp.jpg
+myenv/
+__pycache__/
