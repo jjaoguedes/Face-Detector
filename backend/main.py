@@ -1,10 +1,10 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Request
 import face_recognition
 import numpy as np
 import cv2
 import shutil
 import mysql.connector
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import serial
 from pathlib import Path
@@ -13,7 +13,6 @@ import logging
 import time
 import pandas as pd
 from io import BytesIO
-from datetime import timedelta
 from fastapi.responses import StreamingResponse
 
 # Configuração de logger
@@ -33,7 +32,7 @@ app.add_middleware(
 # Inicializa conexão serial com Arduino uma única vez
 try:
     arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
-    time.sleep(2)  # Aguarda Arduino reiniciar
+    time.sleep(2)
     logger.info("Conexão com Arduino estabelecida com sucesso.")
 except serial.SerialException as e:
     logger.error(f"Erro ao conectar com o Arduino: {e}")
@@ -67,11 +66,47 @@ def carregar_rostos_conhecidos():
         logger.error(f"Erro ao carregar embeddings: {err}")
     return banco_embeddings
 
+def registrar_falha(ip: str):
+    agora = datetime.now(pytz.timezone('America/Manaus'))
+    cursor = db.cursor()
+    cursor.execute("""
+        INSERT INTO falhas_reconhecimento (ip, timestamp, tentativas)
+        VALUES (%s, %s, 1)
+        ON DUPLICATE KEY UPDATE
+            tentativas = tentativas + 1,
+            timestamp = %s
+    """, (ip, agora, agora))
+    db.commit()
+
+def verificar_bloqueio(ip: str):
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("SELECT tentativas, timestamp FROM falhas_reconhecimento WHERE ip = %s", (ip,))
+    falha = cursor.fetchone()
+    if falha and falha["tentativas"] >= 5:
+        agora = datetime.now(pytz.timezone('America/Manaus'))
+        timestamp = falha["timestamp"]
+
+        # Adição para corrigir erro de datetime naive vs aware
+        if timestamp.tzinfo is None:
+            timestamp = pytz.timezone('America/Manaus').localize(timestamp)
+
+        tempo_passado = agora - timestamp
+        if tempo_passado < timedelta(minutes=5):
+            return True
+        else:
+            cursor.execute("DELETE FROM falhas_reconhecimento WHERE ip = %s", (ip,))
+            db.commit()
+    return False
+
 db = conectar_db()
 banco_embeddings = carregar_rostos_conhecidos()
 
 @app.post("/face")
-async def reconhecer_rosto(imagem: UploadFile = File(...)):
+async def reconhecer_rosto(request: Request, imagem: UploadFile = File(...)):
+    ip = request.client.host
+    if verificar_bloqueio(ip):
+        return {"erro": "Muitas tentativas falhas. Tente novamente em alguns minutos."}
+
     try:
         caminho_temp = Path("temp.jpg")
         with caminho_temp.open("wb") as buffer:
@@ -88,6 +123,7 @@ async def reconhecer_rosto(imagem: UploadFile = File(...)):
         embeddings = face_recognition.face_encodings(imagem_rgb, locais_dos_rostos)
 
         if len(embeddings) == 0:
+            registrar_falha(ip)
             return {"erro": "Nenhum rosto detectado."}
 
         for emb in embeddings:
@@ -132,7 +168,7 @@ async def reconhecer_rosto(imagem: UploadFile = File(...)):
                     elif registro[0] == 1:
                         data_entrada = registro[1]
                         if data_entrada.tzinfo is None:
-                            data_entrada = data_entrada.replace(tzinfo=pytz.timezone('America/Manaus'))
+                            data_entrada = pytz.timezone('America/Manaus').localize(data_entrada)
 
                         tempo_total = (agora - data_entrada).total_seconds()
                         cursor.execute("""
@@ -158,14 +194,13 @@ async def reconhecer_rosto(imagem: UploadFile = File(...)):
                     logger.error(f"Erro de banco: {err}")
                     return {"erro": "Erro de banco de dados."}
 
+        registrar_falha(ip)
         return {"erro": "Rosto não reconhecido."}
 
     except Exception as e:
         logger.error(f"Erro geral: {e}")
         return {"erro": "Erro ao processar a imagem ou realizar o reconhecimento."}
 
-
-@app.get("/gerar-relatorio/semanal")
 @app.get("/gerar-relatorio/semanal")
 def gerar_relatorio_semanal():
     try:
@@ -280,7 +315,6 @@ def gerar_relatorio_mensal():
     except Exception as e:
         logger.error(f"Erro ao gerar relatório mensal: {e}")
         return {"erro": "Erro ao gerar relatório mensal."}
-
 
 @app.on_event("shutdown")
 def shutdown_event():

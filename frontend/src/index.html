@@ -7,19 +7,21 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Controle de Acesso com Reconhecimento Facial</h1>
+  <div class="container">
+    <h1>Controle de Acesso com Reconhecimento Facial</h1>
 
-  <div id="camera">
-    <video id="video" autoplay muted></video>
-    <canvas id="canvas" style="display:none;"></canvas>
-  </div>
+    <div id="camera">
+      <video id="video" autoplay muted></video>
+      <canvas id="canvas" style="display:none;"></canvas>
+    </div>
 
-  <p id="mensagem"></p>
+    <p id="mensagem"></p>
 
-  <div id="relatorio">
-    <button id="gerarRelatorioSemanal">Gerar Relatório Semanal</button>
-    <button id="gerarRelatorioMensal">Gerar Relatório Mensal</button>
-    <a id="downloadRelatorio" href="#" style="display:none" download>Baixar Relatório</a>
+    <div id="relatorio">
+      <button id="gerarRelatorioSemanal">📅 Relatório Semanal</button>
+      <button id="gerarRelatorioMensal">📊 Relatório Mensal</button>
+      <a id="downloadRelatorio" href="#" style="display:none" download>⬇️ Baixar Relatório</a>
+    </div>
   </div>
 
   <script defer src="/face-api.min.js"></script>

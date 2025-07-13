@@ -1,31 +1,80 @@
-body {
-  font-family: Arial, sans-serif;
-  text-align: center;
+/* Reset básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-#video {
-  width: 400px;
-  border: 2px solid #333;
-  margin-top: 20px;
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f1f5f9;
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  min-height: 100vh;
+}
+
+.container {
+  background: #fff;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 100%;
+  max-width: 600px;
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #0f172a;
 }
 
 #camera {
-  margin-bottom: 20px;
+  position: relative;
+  border: 3px solid #3b82f6;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+#video {
+  width: 100%;
+  border-radius: 12px;
+}
+
+#mensagem {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #1e293b;
+  background-color: #e0f2fe;
+  padding: 10px;
+  border-radius: 8px;
 }
 
 #relatorio {
   margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-button {
-  padding: 10px 20px;
-  margin: 10px;
-  background-color: #4CAF50;
+#relatorio button,
+#relatorio a {
+  background-color: #3b82f6;
   color: white;
   border: none;
+  padding: 12px;
+  border-radius: 8px;
   cursor: pointer;
+  text-decoration: none;
+  font-size: 16px;
+  transition: background-color 0.2s ease;
 }
 
-button:hover {
-  background-color: #45a049;
+#relatorio button:hover,
+#relatorio a:hover {
+  background-color: #2563eb;
 }
